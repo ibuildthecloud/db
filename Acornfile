@@ -1,0 +1,47 @@
+args: {
+    dbName: "instance"
+    username: "user"
+}
+
+services: db: {
+    default: true
+	container: "mariadb"
+	secrets: ["admin", "user"]
+	ports: 3306
+    data: {
+        dbName: localData.name
+    }
+}
+
+containers: mariadb: {
+	image: "mariadb:10.6.10"
+	env: {
+		MARIADB_ROOT_PASSWORD: "@{secrets.admin.password}"
+		MARIADB_USER:          "@{secrets.user.username}"
+		MARIADB_PASSWORD:      "@{secrets.user.password}"
+		MARIADB_DATABASE:      localData.name
+	}
+	dirs: "/var/lib/mysql": "volume://db-data?subPath=data"
+	ports: 3306
+	probes: ready: {
+		initialDelaySeconds: 5
+		exec: command: [ "bash", "-ec", "exec", "mysqladmin", "status", "-uroot", "-p\"${MARIADB_ROOT_PASSWORD}\""]
+	}
+}
+
+secrets: "admin": {
+	type: "basic"
+	data: username: "root"
+}
+
+secrets: "user": {
+	type: "basic"
+	data: username: localData.name
+	if args.dev {
+		data: password: localData.name
+	}
+}
+
+localData: {
+    name: "acornhub"
+}
